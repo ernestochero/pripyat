@@ -8,7 +8,7 @@ import akka.util.Timeout
 import model.commons.util.Request
 import model.config.AppConfig._
 import model.integration.nem.NemResponses._
-import model.integration.nem.NemExceptions.NemAPIException
+import model.integration.nem.NemExceptions._
 import model.integration.nem.NemRequests._
 
 import scala.concurrent.Future
@@ -53,6 +53,8 @@ case class NemAPI() {
 class NemSync extends Actor with Request with NemCodecsFormat{
   import context.dispatcher
   implicit val system = context.system
+
+  override def parseExceptionMessage(msg :String) = NemAPIException(msg)
 
   val listBaseUri: List[String] = hostNem()
 

@@ -15,7 +15,9 @@ object NemResponses{
   case class NemGenerateAccountResponse(privateKey: String, address: String, publicKey: String) extends NemResponse
 }
 
+abstract class APIIntegrationException(msg: String) extends Exception(msg)
+case class GeneralAPIException(msg :String) extends APIIntegrationException(msg)
+
 object NemExceptions{
-  abstract class NemException(msg: String) extends Exception(msg)
-  case class NemAPIException(msg: String) extends NemException(msg)
+  case class NemAPIException(msg :String) extends APIIntegrationException(msg)
 }

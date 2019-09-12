@@ -9,8 +9,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
+import model.integration.nem._
 
 trait Request {
+
+  def parseExceptionMessage(msg :String): APIIntegrationException = GeneralAPIException(msg)
 
   def persistRequest[M](listBaseUri: List[String],
                         uri: String,
@@ -31,15 +34,10 @@ trait Request {
       )
       makeRequest[M](request) recoverWith {
         case ex: Exception =>
-          if(listUrl.isEmpty) {
-            println("All urlRetries have been failed")
-            Future.failed[M](ex)
-          }
-          else {
-            println("statusRetry-> currentUrl: " + url + "  nextUrlToUse: "+ listUrl.head + " queueUrlToRetry: "+ listUrl.tail)
-            println("Retry with url: "+ listUrl.head)
+          if(listUrl.isEmpty)
+            Future.failed[M](parseExceptionMessage(ex.getMessage))
+          else
             persisting(listUrl.head, listUrl.tail)
-          }
       }
     }
     val urlsToRetry = listBaseUri.map(baseUri => baseUri + uri)
@@ -64,7 +62,8 @@ trait Request {
     makeRequest[M](request)
   }
 
-  def makeRequest[M](request: HttpRequest)(implicit um:Unmarshaller[String, M], system: ActorSystem, materializer: ActorMaterializer): Future[M] = {
+  def makeRequest[M](request: HttpRequest
+                    )(implicit um:Unmarshaller[String, M], system: ActorSystem, materializer: ActorMaterializer): Future[M] = {
     implicit val ec: ExecutionContext = system.dispatcher
 
     def processResponse(httpResponse: HttpResponse): Future[M] = {
@@ -75,7 +74,7 @@ trait Request {
         case resp @ HttpResponse(code, _, _, _) =>
           println("Request failed, response code: " + code)
           resp.discardEntityBytes()
-          Future.failed[M](new Exception("Request failed, response code: " + code))
+          Future.failed[M](parseExceptionMessage("Request failed, response code: " + code))
       }
     }
     Http().singleRequest(request)
